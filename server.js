@@ -6,11 +6,14 @@ const express = require('express');
 const app = express();
 //morgan middleware - log moves and detail errors in the node terminal
 const morgan = require('morgan');
+const { restart } = require('nodemon');
 app.use(morgan('dev'));
+//express.json middleware to utilize POST successfully
+app.use(express.json());
 
 //CRUD functionality:
 //GET all employees
-app.get('api/employees', async(rerq, res, next)=> {
+app.get('/api/employees', async(req, res, next)=> {
   try{
     const SQL = `
       SELECT *
@@ -25,7 +28,7 @@ app.get('api/employees', async(rerq, res, next)=> {
 });
 
 //GET all categories
-app.get('api/categories', async (req, res, next)=> {
+app.get('/api/categories', async (req, res, next)=> {
   try{
     const SQL = `
       SELECT *
@@ -33,6 +36,59 @@ app.get('api/categories', async (req, res, next)=> {
     `;
     const response = await client.query(SQL);
     res.send(response.rows);
+  }
+  catch(error){
+    next(error);
+  }
+});
+
+//DELETE employee
+app.delete('/api/employees/:id', async(req, res, next)=> {
+  try{
+    const SQL = `
+      DELETE FROM employees
+      WHERE id = $1
+    `;
+    await client.query(SQL, [req.params.id]);
+    res.sendStatus(204);
+  }
+  catch(error){
+    next(error);
+  }
+});
+
+//POST a new employee
+app.post('/api/employees', async(req, res, next)=> {
+  try{
+    const SQL = `
+      INSERT INTO employees(txt, department_id)
+      VALUES($1, $2)
+      RETURNING *
+    `;
+    const response = await client.query(SQL, [req.body.txt, req.body.department_id]);
+    res.status(201).send(response.rows[0]);
+  }
+  catch(error){
+    next(error);
+  }
+});
+
+app.use((error, req, res, next)=> {
+  res.status(error.status || 500).send({message: error.message || error});
+});
+
+//PUT edit employees
+app.put('/api/employees/:id', async(req, res, next)=> {
+  try{
+    SQL  = `
+      UPDATE employees
+      SET txt = $1,
+      category_id = $2,
+      WHERE id = $3
+      RETURNING *
+    `;
+    const response = await client.query(SQL, [req.body.txt, req.body.department_id, req.params.id]);
+    res.send(response.rows[0]);
   }
   catch(error){
     next(error);
@@ -82,9 +138,12 @@ const init = async()=> {
     app.listen(port, ()=> {
       console.log(`listening on port ${port}`);
       //console logging helpful curl commands to copy and paste from the node terminal to my main terminal for testing
-      console.log(`curl localhost:${port}/api/employees`)
-      console.log(`curl localhost:${port}/api/categories`)
-    })
+      console.log(`curl localhost:${port}/api/employees`);
+      console.log(`curl localhost:${port}/api/categories`);
+      console.log(`curl -X DELETE localhost:${port}/api/employees/2`);
+      console.log(`curl -X POST localhost:${port}/api/employees -d '{"txt": "Cooper Bossman", "department_id": 2}' -H "Content-Type:application/json"`);
+      console.log(`curl -X PUT localhost:${port}/api/employees/2 -d '{"txt":"Karen Johnson", "department_id": 2} -H "Content-Type:application/json"`);
+    });
 }
 
 init();
