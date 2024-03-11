@@ -27,8 +27,8 @@ app.get('/api/employees', async(req, res, next)=> {
   }
 });
 
-//GET all categories
-app.get('/api/categories', async (req, res, next)=> {
+//GET all departments
+app.get('/api/departments', async (req, res, next)=> {
   try{
     const SQL = `
       SELECT *
@@ -73,10 +73,6 @@ app.post('/api/employees', async(req, res, next)=> {
   }
 });
 
-app.use((error, req, res, next)=> {
-  res.status(error.status || 500).send({message: error.message || error});
-});
-
 //PUT edit employees
 app.put('/api/employees/:id', async(req, res, next)=> {
   try{
@@ -95,7 +91,11 @@ app.put('/api/employees/:id', async(req, res, next)=> {
   }
 });
 
-//init to connect to dadtabase we just created
+app.use((error, req, res, next)=> {
+  res.status(error.status || 500).send({message: error.message || error});
+});
+
+//init to connect to database we just created
 const init = async()=> {
   console.log('connecting to the database');
   await client.connect();
